@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  frontend:
+    build:
+      context: ./path/to/frontend # Replace with the actual path to your front-end directory
+    ports:
+      - "3000:3000" # Map the host port to the container port
+
+  backend:
+    build:
+      context: ./path/to/backend # Replace with the actual path to your back-end directory
+    ports:
+      - "5000:5000" # Map the host port to the container port
