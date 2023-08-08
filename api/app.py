@@ -1,14 +1,25 @@
-from flask import Flask, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
-import jwt
+from dotenv import load_dotenv
+from bson import ObjectId
 import datetime
+import jwt
+import os
+
+load_dotenv() # Enviroment variables
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/password-manager"
-mongo = PyMongo(app)
-app.config["SECRET_KEY"] = "wake-up-Neo"
 
+# Enviroment variables for configuration
+secret_key = os.environ.get('SECRET_KEY')
+mongo_uri = os.environ.get('MONGO_URI')
+
+# app configuration using enviroment variables
+app.config["SECRET_KEY"] = secret_key
+app.config["MONGO_URI"] = mongo_uri
+
+mongo = PyMongo(app)
 
 @app.route("/user_register", methods=['POST'])
 def create_user():
@@ -20,6 +31,7 @@ def create_user():
         user_id = mongo.db.users.insert_one(
             {'username': username, 'email': email, 'password': hashed_password}
         )
+        print(user_id)
         return jsonify({'message': 'Registration succesful!'})
     else:
         return jsonify({'message': 'fields incomplete'})
@@ -36,23 +48,24 @@ def login_user():
         else:
             return jsonify({'message': 'Login failed'})
     
-###################################################################
 
 @app.route("/vault", methods=['POST'])
-def store_password():
+def store_account():
     user_id = request.json['user_id']
     site = request.json['site']
     username = request.json['username']
     password = request.json['password']
     
     if user_id and site and username and password:
+        user_id_obj = ObjectId(user_id)  # Convert user_id string to ObjectId
+        hashed_password = generate_password_hash(password)
         account_data = {
-            "user_id": user_id,
+            "user_id": user_id_obj,  
             "site": site,
             "username": username,
-            "password": password
+            "password": hashed_password
         }
-        mongo.db.passwords.insert_one(account_data)
+        mongo.db.account_data.insert_one(account_data)
         return jsonify({'message': 'account stored successfully'})
     else:
         return jsonify({'message': 'Fields incomplete'})
