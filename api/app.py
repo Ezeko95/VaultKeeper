@@ -76,6 +76,31 @@ def get_user_accounts(user_id):
     accounts = list(account_data)
     return jsonify(accounts)
 
+@app.route("/vault/<user_id>/<site>", methods=['PUT'])
+def update_account(user_id, site):
+    new_site = request.json.get('new_site')
+    new_username = request.json.get('new_username')
+    new_password = request.json.get('new_password')
+
+    if new_site or new_username or new_password:
+        query = {'user_id': user_id, 'site': site}
+        updates = {}
+        if new_site:
+            updates['site'] = new_site
+        if new_username:
+            updates['username'] = new_username
+        if new_password:
+            updates['password'] = generate_password_hash(new_password)
+
+        result = mongo.db.account_data.update_one(query, {'$set': updates})
+        
+        if result.modified_count > 0:
+            return jsonify({'message': 'Account updated successfully'})
+        else:
+            return jsonify({'message': 'No changes made'})
+    else:
+        return jsonify({'message': 'No valid data provided'})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
