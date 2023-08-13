@@ -1,2 +1,4 @@
 Flask==2.0.1
-pymongo==4.4.1
+python-dotenv==0.19.2
+Flask-PyMongo==2.3.0
+flask-jwt-extended==4.5.2

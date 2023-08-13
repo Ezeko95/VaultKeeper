@@ -1,18 +1,13 @@
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, request, jsonify, g
+from flask import Flask
 from flask_pymongo import PyMongo
 from dotenv import load_dotenv
-from functools import wraps
-from bson import ObjectId
-import datetime
-import jwt
 import os
-import bcrypt
+from routes.auth import auth
+from routes.vault import vault
+
 
 
 load_dotenv() # Enviroment variables
-
-salt = bcrypt.gensalt() # Salt for passwords
 
 app = Flask(__name__)
 
@@ -26,120 +21,10 @@ app.config["MONGO_URI"] = mongo_uri
 
 mongo = PyMongo(app)
 
-def authenticate(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        token = request.headers.get('Authorization')
-
-        if not token:
-            return jsonify({'message': 'Token missing'}), 401
-
-        try:
-            decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            g.user_id = decoded_token['user_id']  # Storing user_id in Flask's "g" object!
-            return func(*args, **kwargs)
-        except jwt.ExpiredSignatureError:
-            return jsonify({'message': 'Token expired'}), 401
-        except jwt.DecodeError:
-            return jsonify({'message': 'Invalid token'}), 401
-    return wrapper
-
-@app.before_request
-def check_authentication():
-    if request.endpoint not in ['create_user', 'login_user']:
-        authenticate_required = True
-        try:
-            token = request.headers.get('Authorization')
-            decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            g.user_id = decoded_token['user_id']
-        except (jwt.ExpiredSignatureError, jwt.DecodeError):
-            authenticate_required = False
-
-        if not authenticate_required:
-            return jsonify({'message': 'Authentication required'}), 401
-
-
-@app.route("/user_register", methods=['POST'])
-def create_user():
-    username = request.json['username']
-    password = request.json['password']
-    email = request.json['email']
-    if username and password and email:
-        hashed_password = generate_password_hash(password)
-        user_id = mongo.db.users.insert_one(
-            {'username': username, 'email': email, 'password': hashed_password}
-        )
-        print(user_id)
-        return jsonify({'message': 'Registration succesful!'})
-    else:
-        return jsonify({'message': 'fields incomplete'})
-
-@app.route("/user_login", methods=['POST'])
-def login_user():
-    email = request.json['email']
-    password = request.json['password']
-    if email and password:
-        user_data = mongo.db.users.find_one({'email': email})
-        if user_data and check_password_hash(user_data['password'], password):
-            token = jwt.encode({'user_id': str(user_data['_id']), 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)}, app.config['SECRET_KEY'], algorithm='HS256')
-            return jsonify({'message': 'Login successful', 'token': token})
-        else:
-            return jsonify({'message': 'Login failed'})
-    
-
-@app.route("/vault", methods=['POST'])
-def store_account():
-    user_id = request.json['user_id']
-    site = request.json['site']
-    username = request.json['username']
-    password = request.json['password']
-    
-    if user_id and site and username and password:
-        user_id_obj = ObjectId(user_id)  # Convert user_id string to ObjectId
-        hashed_password = generate_password_hash(password)
-        account_data = {
-            "user_id": user_id_obj,  
-            "site": site,
-            "username": username,
-            "password": hashed_password
-        }
-        mongo.db.account_data.insert_one(account_data)
-        return jsonify({'message': 'account stored successfully'})
-    else:
-        return jsonify({'message': 'Fields incomplete'})
-
-@app.route("/vault/<user_id>", methods=['GET'])
-def get_user_accounts(user_id):
-    account_data = mongo.db.account_data.find({'user_id': user_id}, {'_id': 0})
-    accounts = list(account_data)
-    return jsonify(accounts)
-
-@app.route("/vault/<user_id>/<site>", methods=['PUT'])
-def update_account(user_id, site):
-    new_site = request.json.get('new_site')
-    new_username = request.json.get('new_username')
-    new_password = request.json.get('new_password')
-
-    if new_site or new_username or new_password:
-        query = {'user_id': user_id, 'site': site}
-        updates = {}
-        if new_site:
-            updates['site'] = new_site
-        if new_username:
-            updates['username'] = new_username
-        if new_password:
-            updates['password'] = generate_password_hash(new_password)
-
-        result = mongo.db.account_data.update_one(query, {'$set': updates})
-        
-        if result.modified_count > 0:
-            return jsonify({'message': 'Account updated successfully'})
-        else:
-            return jsonify({'message': 'No changes made'})
-    else:
-        return jsonify({'message': 'No valid data provided'})
-
+app.register_blueprint(auth, url_prefix='/auth')
+app.register_blueprint(vault, url_prefix='/vault')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    with app.app_context():
+        app.run(debug=True)
 
