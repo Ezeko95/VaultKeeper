@@ -20,10 +20,7 @@ const Login: React.FC<LoginProps> = ({ setIsLogin }) => {
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:5000/auth/user_login",
-        loginForm
-      );
+      const res = await axios.post("/auth/user_login", loginForm);
       setCookie("token", res.data.token);
       setIsLogin(true);
     } catch (error) {
