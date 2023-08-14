@@ -27,7 +27,7 @@ def create_user():
         return jsonify({'message': 'fields incomplete'})
 
 @auth.route("/user_login", methods=['POST'])
-def login_user():
+def login_user():   
     with current_app.app_context():
         mongo = PyMongo(current_app)
         secret_key = current_app.config.get("SECRET_KEY")

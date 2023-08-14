@@ -1,18 +1,14 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Landing from "./Views/Landing/Landing";
-import Vault from "./Views/Vault/Vault";
+import { Route, Routes } from "react-router-dom";
+import Landing from "./Views/Landing";
 
-const App: React.FC = () => {
+function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
 
-      <Route path="/vault" element={<Vault />} />
-
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<h1>Not Found</h1>} />
     </Routes>
   );
-};
+}
 
 export default App;

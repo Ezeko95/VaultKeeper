@@ -2,6 +2,7 @@ from flask import Flask
 from flask_pymongo import PyMongo
 from dotenv import load_dotenv
 import os
+from flask_cors import CORS
 from routes.auth import auth
 from routes.vault import vault
 
@@ -10,6 +11,7 @@ from routes.vault import vault
 load_dotenv() # Enviroment variables
 
 app = Flask(__name__)
+CORS(app) 
 
 # Enviroment variables for configuration
 secret_key = os.environ.get('SECRET_KEY')
